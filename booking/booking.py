@@ -140,10 +140,10 @@ if __name__ == '__main__':
     for index, row in data.iterrows():
         if row['MessageType'] == 'Add':
             booking.add(row)
-        elif row['MessageType'] == 'Remove':
-            booking.remove(row)
         elif row['MessageType'] == 'Reduce':
             booking.reduce(row)
+        elif row['MessageType'] == 'Remove':
+            booking.remove(row)
         else:
             booking.trade(row)
 
