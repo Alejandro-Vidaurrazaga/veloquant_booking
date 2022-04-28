@@ -1,6 +1,4 @@
-import numpy as np
 import pandas as pd
-# from matplotlib import pyplot as plt
 
 PATH = 'C:/Users/Alejandro/Downloads/BookFGBL.csv'
 NAMES = ['MessageType', 'Time', 'OrderId', 'Price', 'Quantity', 'Side']
