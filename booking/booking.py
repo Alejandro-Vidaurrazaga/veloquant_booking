@@ -13,11 +13,13 @@ class Booking:
         1: 'Bid'
     }
 
-    def __init__(self, price_field, quantity_field, side_field):
+    def __init__(self, price_field, quantity_field, side_field, order_id_field):
         self.book = pd.DataFrame([], columns=['Bid', 'Price', 'Ask'])
+        self.historical = pd.DataFrame([], columns=['OrderId', 'Quantity', 'Side'])
         self.quantity_field = quantity_field
         self.price_field = price_field
         self.side_field = side_field
+        self.order_id_field = order_id_field
 
     def print_book(self):
         first_part = self.book[self.book['Ask'] != -1]
@@ -30,24 +32,29 @@ class Booking:
         quantity = row_to_add[self.quantity_field]
         price = row_to_add[self.price_field]
         side = row_to_add[self.side_field]
+        order_id = row_to_add[self.order_id_field]
 
         if self.book.shape[0] == 0:
-            self._add(price, quantity, side)
+            self.book = Booking._add(self.book, {Booking.SIDE[side]: quantity, 'Price': price, Booking.SIDE[-side]: -1})
         else:
             try:
                 first_index = self.book[(self.book[self.price_field] == price) &
                                         (self.book[Booking.SIDE[side]] != -1)].index[0]
                 self.book.loc[first_index, Booking.SIDE[side]] += quantity
             except IndexError:
-                self._add(price, quantity, side)
+                self.book = Booking._add(self.book, {Booking.SIDE[side]: quantity, 'Price': price,
+                                                     Booking.SIDE[-side]: -1})
 
+        self.historical = Booking._add(self.historical, {'Quantity': quantity, 'OrderId': order_id, 'Side': side})
         self.print_book()
 
-    def _add(self, price, quantity, side):
-        in_element = pd.DataFrame([{Booking.SIDE[side]: quantity, 'Price': price, Booking.SIDE[-side]: -1}])
-        self.book = pd.concat([self.book, in_element], axis=0, ignore_index=True)
+    @staticmethod
+    def _add(df, row_to_save):
+        in_element = pd.DataFrame([row_to_save])
+        # in_element = pd.DataFrame([{Booking.SIDE[side]: quantity, 'Price': price, Booking.SIDE[-side]: -1}])
+        return pd.concat([df, in_element], axis=0, ignore_index=True)
 
-    def remove(self, row_to_romove):
+    def remove(self, row_to_remove):
         pass
 
 
@@ -58,8 +65,10 @@ def read_input(custom_input=False, *, path=None, names=None):
 
 if __name__ == '__main__':
     data = read_input(CUSTOM_INPUT, path=PATH, names=NAMES)
-    booking = Booking('Price', 'Quantity', 'Side')
+    booking = Booking('Price', 'Quantity', 'Side', 'OrderId')
 
     for index, row in data.iterrows():
         if row['MessageType'] == 'Add':
             booking.add(row)
+        elif row['MessageType'] == 'Remove':
+            booking.remove(row)
