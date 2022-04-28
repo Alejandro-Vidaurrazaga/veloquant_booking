@@ -4,6 +4,15 @@ import pandas as pd
 
 PATH = 'C:/Users/Alejandro/Downloads/BookFGBL.csv'
 NAMES = ['MessageType', 'Time', 'OrderId', 'Price', 'Quantity', 'Side']
+CUSTOM_INPUT = [
+    {'MessageType': 'Add', 'Time': 15002.63, 'OrderId': 15002, 'Price': 157.5, 'Quantity': 7, 'Side': 1},
+    {'MessageType': 'Add', 'Time': 15003.05, 'OrderId': 15003, 'Price': 157.6, 'Quantity': 13, 'Side': -1},
+    {'MessageType': 'Add', 'Time': 15003.07, 'OrderId': 15004, 'Price': 157.6, 'Quantity': 5, 'Side': -1},
+    {'MessageType': 'Add', 'Time': 1500.12, 'OrderId': 15005, 'Price': 157.4, 'Quantity': 22, 'Side': 1},
+    {'MessageType': 'Remove', 'Time': 15003.17, 'OrderId': 15003, 'Price': None, 'Quantity': None, 'Side': None},
+    # {'MessageType': 'Trade', 'Time': 15003.19, 'OrderId': None, 'Price': 157.5, 'Quantity': 5, 'Side': None},
+    {'MessageType': 'Reduce', 'Time': 15004.01, 'OrderId': 15005, 'Price': None, 'Quantity': 10, 'Side': None},
+]
 CUSTOM_INPUT = None
 
 
@@ -24,7 +33,9 @@ class Booking:
     def print_book(self, operation=None):
         first_part = self.book[self.book['Ask'] != -1]
         second_part = self.book[self.book['Bid'] != -1]
-        printed_book = pd.concat([first_part, second_part], axis=0, ignore_index=True)
+        printed_book = pd.concat([first_part.sort_values('Price', axis=0, ascending=False)[:5],
+                                  second_part.sort_values('Price', axis=0, ascending=False)[:5]],
+                                 axis=0, ignore_index=True)
 
         if operation is not None:
             print(operation)
@@ -58,6 +69,18 @@ class Booking:
                                                          'Price': price})
         self.print_book('Add')
 
+    def reduce(self, row_to_manage):
+        order_id = row_to_manage[self.order_id_field]
+        row = self.historical.loc[self.historical['OrderId'] == order_id, ['Quantity', 'Side', 'Price']]
+        quantity = row_to_manage[self.quantity_field]
+        side = row.values[0][1]
+        price = row.values[0][2]
+        first_index = self.book[(self.book[self.price_field] == price) & (self.book[Booking.SIDE[side]] != -1)].index[0]
+        self.book.loc[first_index, Booking.SIDE[side]] = quantity
+        self.historical.loc[row.index[0], 'Quantity'] = quantity
+
+        self.print_book('Reduce')
+
     def remove(self, row_to_manage):
         order_id = row_to_manage[self.order_id_field]
         row = self.historical.loc[self.historical['OrderId'] == order_id, ['Quantity', 'Side', 'Price']]
@@ -67,12 +90,14 @@ class Booking:
         first_index = self.book[(self.book[self.price_field] == price) & (self.book[Booking.SIDE[side]] != -1)].index[0]
         self.book.loc[first_index, Booking.SIDE[side]] -= quantity
 
-        if self.book.loc[first_index, Booking.SIDE[side]] == 0:
+        if self.book.loc[first_index, Booking.SIDE[side]] <= 0:
             self.book.drop(first_index, inplace=True)
 
         self.historical.drop(row.index[0], inplace=True)
-
         self.print_book('Remove')
+
+    def trade(self, row_to_manage):
+        pass
 
 
 def read_input(custom_input=None, *, path=None, names=None):
@@ -97,3 +122,5 @@ if __name__ == '__main__':
             booking.add(row)
         elif row['MessageType'] == 'Remove':
             booking.remove(row)
+        elif row['MessageType'] == 'Reduce':
+            booking.reduce(row)
