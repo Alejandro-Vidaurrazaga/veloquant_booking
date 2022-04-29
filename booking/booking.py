@@ -8,11 +8,11 @@ CUSTOM_INPUT = [
     {'MessageType': 'Add', 'Time': 15003.07, 'OrderId': 15004, 'Price': 157.6, 'Quantity': 5, 'Side': -1},
     {'MessageType': 'Add', 'Time': 1500.12, 'OrderId': 15005, 'Price': 157.4, 'Quantity': 22, 'Side': 1},
     {'MessageType': 'Remove', 'Time': 15003.17, 'OrderId': 15003, 'Price': None, 'Quantity': None, 'Side': None},
-    # {'MessageType': 'Add', 'Time': 15003.18, 'OrderId': 15015, 'Price': 157.5, 'Quantity': 3, 'Side': 1},
-    {'MessageType': 'Trade', 'Time': 15003.19, 'OrderId': None, 'Price': 157.5, 'Quantity': 5, 'Side': None},
+    {'MessageType': 'Add', 'Time': 15003.18, 'OrderId': 15015, 'Price': 157.5, 'Quantity': 3, 'Side': 1},
+    {'MessageType': 'Trade', 'Time': 15003.19, 'OrderId': None, 'Price': 157.5, 'Quantity': 9, 'Side': None},
     {'MessageType': 'Reduce', 'Time': 15004.01, 'OrderId': 15005, 'Price': None, 'Quantity': 10, 'Side': None},
 ]
-CUSTOM_INPUT = None
+# CUSTOM_INPUT = None
 
 
 class Booking:
@@ -98,11 +98,9 @@ class Booking:
         deleted = False
 
         for index, val in zip(rows.index, rows.values):
-            side = val[0]
-            historical_quantity = self.historical.loc[index, 'Quantity']
-
             if not deleted:
                 deleted = True
+                side = val[0]
                 first_index = self.book[(self.book[self.price_field] == price) &
                                         (self.book[Booking.SIDE[side]] != -1)].index[0]
                 self.book.loc[first_index, Booking.SIDE[side]] -= quantity
@@ -110,14 +108,16 @@ class Booking:
                 if self.book.loc[first_index, Booking.SIDE[side]] <= 0:
                     self.book.drop(first_index, inplace=True)
 
+            historical_quantity = self.historical.loc[index, 'Quantity']
             new_quantity = abs(quantity - historical_quantity)
             self.historical.loc[index, 'Quantity'] -= quantity
             quantity = new_quantity
 
-            if self.historical.loc[index, 'Quantity'] <= 0:
+            if self.historical.loc[index, 'Quantity'] == 0:
                 self.historical.drop(index, inplace=True)
-            else:
                 break
+            elif self.historical.loc[index, 'Quantity'] < 0:
+                self.historical.drop(index, inplace=True)
 
 
 def read_input(custom_input=None, *, path=None, names=None):
